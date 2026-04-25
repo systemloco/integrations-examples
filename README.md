@@ -1,11 +1,14 @@
 # LocoAware Data Feeds — Integration Guides & Webhook Examples
 
+
+<img src="docs/stickers/stickers1.png" alt="Loco for System Loco" width="120" align="right">
 Open-source documentation and reference implementations for receiving webhooks from the **LocoAware Integrations** application.
 
 LocoAware can stream data to your systems through four data feeds, each at a different level of abstraction. This repository contains:
 
 - **Integration guides** — full payload reference for each feed
 - **Webhook receiver examples** — runnable HTTP handlers in Java, C#, Node, PHP, and Ruby
+
 
 ---
 
@@ -18,11 +21,15 @@ LocoAware can stream data to your systems through four data feeds, each at a dif
 | **Shipments** | Shipment-level events (position reports, exceptions, status changes, notes) | Low | [Shipments_Integration_Guide.md](./Shipments_Integration_Guide.md) |
 | **Assets** | Asset-level events | Low | [Assets_Integration_Guide.md](./Assets_Integration_Guide.md) |
 
+<img src="docs/stickers/stickers4.png" alt="Know my flow — KPIs smashed" width="280" align="right">
+
 If you're not sure which to pick, see the "Which data feed should I choose?" section at the top of any of the guides — they all share the same decision matrix.
 
 ---
 
 ## Reference webhook receivers
+
+<img src="docs/stickers/stickers2.png" alt="AI logistics FTW — deploy your rules to the real world" width="300" align="right">
 
 Working examples in five languages. Each one implements all four feeds in a single service, with HMAC signature verification, mock repositories, and a stand-in queue you swap for your real broker.
 
@@ -40,6 +47,8 @@ Read the [examples README](./examples/README.md) for the patterns shared across 
 
 ## Two patterns the examples illustrate
 
+<img src="docs/stickers/stickers6.png" alt="This is actually fine — Better Logistics 2" width="260" align="right">
+
 ### 1. Always enqueue high-volume feeds
 
 For **Device Reports V2** and **Device Events** the receiver should do the absolute minimum on the request thread: verify the signature, push the payload onto a queue (SQS, SNS, Kafka, Pub/Sub, Service Bus, RabbitMQ, Redis Streams, etc. — or even an `inbox` table in your own database), and respond `202 Accepted`.
@@ -55,6 +64,8 @@ The examples treat the webhook as a **buffer**: receive, persist to the queue, a
 For **Shipments** and **Assets** this is far less critical — even a busy operation typically sees only a few of these per minute. Inline processing is fine, though the same enqueue pattern still works if you'd rather keep the architecture uniform.
 
 ### 2. Shipment lookup by device name *or* device id
+
+<img src="docs/stickers/stickers3.png" alt="LocoFlow" width="240" align="left">
 
 For Device Reports V2 and Device Events, associating an incoming message with a shipment in your system requires looking up the shipment two ways:
 
@@ -96,6 +107,7 @@ If you don't have a system that writes shipment IDs into device names when devic
 ---
 
 ## Contributing
+
 
 Bug reports and additional language examples are welcome. The examples deliberately avoid project-specific frameworks and use only the most common HTTP framework per language so they're easy to lift into your own stack.
 
