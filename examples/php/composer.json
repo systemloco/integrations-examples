@@ -1,0 +1,27 @@
+{
+    "name": "locoaware/webhook-example-php",
+    "description": "Example LocoAware webhook receiver (PHP / Slim 4).",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": "^8.2",
+        "slim/slim": "^4.12",
+        "slim/psr7": "^1.6"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "LocoAware\\Webhook\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "LocoAware\\Webhook\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit"
+    }
+}
