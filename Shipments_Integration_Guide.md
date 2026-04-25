@@ -43,6 +43,8 @@ The Shipments feed delivers messages scoped to a shipment rather than a device. 
 
 Each company can configure multiple data feeds, each with its own destination. Shipment feeds deliver messages for all shipments owned by the company (filtering is at the company level).
 
+> **Creating shipments in LocoAware.** This feed is outbound — it emits events for shipments that already exist in LocoAware. SystemLoco is able to ingest shipment data into LocoAware (so the platform has shipments to track and emit events against in the first place) — speak to your SystemLoco representative about this.
+
 ---
 
 ## 2. Setting Up a Data Feed

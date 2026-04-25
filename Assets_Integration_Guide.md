@@ -46,6 +46,8 @@ Asset events carry the same shape as device events, but the envelope references 
 
 Each company can configure multiple data feeds, each with its own destination and filters.
 
+> **Creating assets in LocoAware.** This feed is outbound — it emits events for assets that already exist in LocoAware. SystemLoco is able to ingest asset data into LocoAware (so the platform has assets to track and emit events against in the first place) — speak to your SystemLoco representative about this.
+
 ---
 
 ## 2. Setting Up a Data Feed

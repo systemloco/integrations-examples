@@ -25,6 +25,8 @@ LocoAware can stream data to your systems through four data feeds, each at a dif
 
 If you're not sure which to pick, see the "Which data feed should I choose?" section at the top of any of the guides — they all share the same decision matrix.
 
+> **Heads up — Shipments and Assets are outbound only.** These feeds emit events for shipments and assets that already exist in LocoAware. SystemLoco is able to ingest shipment and asset data into LocoAware so that there's something to track in the first place — speak to your SystemLoco representative about this.
+
 ---
 
 ## Reference webhook receivers
