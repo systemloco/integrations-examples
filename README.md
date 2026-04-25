@@ -3,13 +3,14 @@
 [![tests](https://github.com/systemloco/integrations-examples/actions/workflows/tests.yml/badge.svg)](https://github.com/systemloco/integrations-examples/actions/workflows/tests.yml)
 
 <img src="docs/stickers/stickers1.png" alt="Loco for System Loco" width="120" align="right">
-Open-source documentation and reference implementations for receiving webhooks from the **LocoAware Integrations** application.
+Open-source documentation and reference implementations for receiving webhooks from the *LocoAware Integrations* application. 
 
 LocoAware can stream data to your systems through four data feeds, each at a different level of abstraction. This repository contains:
 
 - **Integration guides** — full payload reference for each feed
 - **Webhook receiver examples** — runnable HTTP handlers in Java, C#, Node, PHP, and Ruby
 
+It's never been easier to get up and running with System Loco! 
 
 ---
 
