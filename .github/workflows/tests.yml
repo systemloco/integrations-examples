@@ -1,0 +1,87 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel in-progress runs on the same ref when a new commit lands.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node:
+    name: Node.js
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/node
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: examples/node/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  java:
+    name: Java
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/java
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - run: mvn -B test
+
+  csharp:
+    name: C#
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/csharp/LocoAware.Webhook.Tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - run: dotnet test --nologo
+
+  php:
+    name: PHP
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/php
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer
+          coverage: none
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - run: vendor/bin/phpunit
+
+  ruby:
+    name: Ruby
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.1'
+          bundler-cache: true
+          working-directory: examples/ruby
+      - run: bundle exec rake test
+        working-directory: examples/ruby

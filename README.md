@@ -1,5 +1,6 @@
 # LocoAware Data Feeds — Integration Guides & Webhook Examples
 
+[![tests](https://github.com/systemloco/integrations-examples/actions/workflows/tests.yml/badge.svg)](https://github.com/systemloco/integrations-examples/actions/workflows/tests.yml)
 
 <img src="docs/stickers/stickers1.png" alt="Loco for System Loco" width="120" align="right">
 Open-source documentation and reference implementations for receiving webhooks from the **LocoAware Integrations** application.
