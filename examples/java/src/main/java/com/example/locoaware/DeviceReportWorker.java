@@ -46,10 +46,9 @@ public class DeviceReportWorker {
     }
 
     private void handleDeviceReport(JsonNode report) {
-        String deviceName = report.path("device").path("name").asText(null);
-        String deviceId   = report.path("device").path("id").asText(null);
+        String deviceId = report.path("device").path("id").asText(null);
 
-        String shipmentId = shipments.findIdByDeviceNameOrId(deviceName, deviceId);
+        String shipmentId = findShipmentForReport(report);
         if (shipmentId != null) {
             shipments.appendEvent(shipmentId, report);
         }
@@ -57,13 +56,21 @@ public class DeviceReportWorker {
         if (deviceId != null && devices.exists(deviceId)) {
             devices.updateLatest(deviceId, report);
         }
+
+        // Touch each observed secondary (paired tag) — presence only. The tag's
+        // authoritative sensor data arrives in its own separate report.
+        for (JsonNode observation : report.path("secondaryObservations")) {
+            String secondaryId = observation.path("id").asText(null);
+            if (secondaryId != null && devices.exists(secondaryId)) {
+                devices.updateLatest(secondaryId, observation);
+            }
+        }
     }
 
     private void handleDeviceEvent(JsonNode event) {
-        String deviceName = event.path("device").path("name").asText(null);
-        String deviceId   = event.path("device").path("id").asText(null);
+        String deviceId = event.path("device").path("id").asText(null);
 
-        String shipmentId = shipments.findIdByDeviceNameOrId(deviceName, deviceId);
+        String shipmentId = findShipmentForReport(event);
         if (shipmentId != null) {
             shipments.appendEvent(shipmentId, event);
         }
@@ -71,5 +78,30 @@ public class DeviceReportWorker {
         if (deviceId != null && devices.exists(deviceId)) {
             devices.updateLatest(deviceId, event);
         }
+    }
+
+    /**
+     * Shipment lookup with a fallback to the relay/primary device.
+     *
+     * A secondary's (BLE tag's) report carries the primary that relayed it in
+     * {@code reportedBy.device}. Tags typically don't have a shipment binding
+     * of their own — falling back to the primary attaches the tag's data to
+     * the same shipment as the gateway it lives on.
+     */
+    private String findShipmentForReport(JsonNode report) {
+        String deviceName = report.path("device").path("name").asText(null);
+        String deviceId   = report.path("device").path("id").asText(null);
+        String shipmentId = shipments.findIdByDeviceNameOrId(deviceName, deviceId);
+        if (shipmentId != null) {
+            return shipmentId;
+        }
+
+        JsonNode relay = report.path("reportedBy").path("device");
+        String relayName = relay.path("name").asText(null);
+        String relayId   = relay.path("id").asText(null);
+        if (relayName != null || relayId != null) {
+            return shipments.findIdByDeviceNameOrId(relayName, relayId);
+        }
+        return null;
     }
 }

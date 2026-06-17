@@ -31,8 +31,9 @@ Concretely: with Shipments you receive a webhook shaped like a shipment and only
 6. [Message Format](#6-message-format)
 7. [Report Reasons](#7-report-reasons)
 8. [Full Example](#8-full-example)
-9. [Null Handling](#9-null-handling)
-10. [Receiving Webhook Events](#10-receiving-webhook-events)
+9. [Primary and Secondary Reporting](#9-primary-and-secondary-reporting)
+10. [Null Handling](#10-null-handling)
+11. [Receiving Webhook Events](#11-receiving-webhook-events)
 
 ---
 
@@ -452,13 +453,197 @@ The `reportReasons` array lists why the device generated this report. A single r
 
 ---
 
-## 9. Null Handling
+## 9. Primary and Secondary Reporting
+
+Some LocoAware devices act as **primaries** (a.k.a. masters) for one or more **secondaries** — typically BLE tags or third-party beacons paired to a cellular/Wi-Fi gateway. When a primary reports in, the feed delivers **two distinct messages** for each paired secondary it observed:
+
+1. **The primary's report** — its own state, plus a `secondaryObservations[]` entry per tag it saw in this window. Each entry carries a `reportId` pointing at the secondary's matching report (below).
+2. **Each secondary's own report** — a separate top-level message for the tag, with sensor data and `reportedBy.device` pointing back at the primary that relayed it.
+
+The two messages are linked both ways: `secondaryObservations[].reportId` on the primary matches `id` on the secondary's report, and `reportedBy.device.id` on the secondary matches `device.id` on the primary's report.
+
+Treat them as independent feed deliveries. They are not guaranteed to arrive in any particular order, and a worker that joins them should do so by ID rather than by arrival time.
+
+### Primary device's report
+
+A locoCard-style gateway reporting in, observing a fleet of paired temperature tags and a cable seal beacon. Trimmed for brevity — only the tag-relevant fields are filled in.
+
+```json
+{
+  "id": "6612b1a0e4b0a1b2c3d4e5f6",
+  "time": "2026-04-09T10:47:58.612Z",
+  "rxTime": "2026-04-09T10:47:58.716Z",
+  "device": {
+    "id": "72308628874417738",
+    "displayId": "HGD-00417738",
+    "model": {
+      "name": "HGD",
+      "family": "locoCard",
+      "product": "LocoCard",
+      "version": 4,
+      "revision": 1
+    },
+    "labels": ["cold-chain", "us-west"]
+  },
+  "owner": {
+    "id": "660fa1b2c3d4e5f6a7b8c9d0",
+    "name": "Acme Logistics"
+  },
+  "reportReasons": ["report"],
+  "location": {
+    "type": "wifi",
+    "time": "2026-04-09T10:47:58.612Z",
+    "global": {
+      "lat": 34.079725,
+      "lon": -117.224535,
+      "cep": 28.0
+    }
+  },
+  "sensors": {
+    "time": "2026-04-09T10:47:58.612Z",
+    "battery": {
+      "level": 100,
+      "state": "good",
+      "voltage": 6.226,
+      "charging": false
+    },
+    "temperature": 25.1,
+    "atmosphericPressure": 968.8,
+    "lightLevel": 67,
+    "orientation": { "x": 0.026, "y": 0.021, "z": -0.996 },
+    "vibration":   { "x": 0.016, "y": 0.015, "z": 0.013 },
+    "movement": "stationary",
+    "externalPower": false
+  },
+  "secondaryObservations": [
+    {
+      "id": "72308628872452464",
+      "displayId": "TAG-72452464",
+      "model": { "name": "Tag-e4bl", "family": "tag", "product": "Tag", "version": 1, "revision": 0 },
+      "reportType": "presence",
+      "reportId": "6612b1a0e4b0a1b2c3d4e5f7",
+      "rssi": -53,
+      "isPaired": true
+    },
+    {
+      "id": "72308628873734501",
+      "displayId": "TAG-73734501",
+      "model": { "name": "Tag-e4bl", "family": "tag", "product": "Tag", "version": 1, "revision": 0 },
+      "reportType": "presence",
+      "reportId": "6612b1a0e4b0a1b2c3d4e5f8",
+      "rssi": -67,
+      "isPaired": true
+    }
+  ],
+  "thirdPartyObservations": [
+    {
+      "type": "cableSeal",
+      "id": "A2:A2:A2:00:07:AB",
+      "displayId": "A2A2A20007AB",
+      "state": "closed",
+      "open": false,
+      "highTemperature": false,
+      "lowBattery": false,
+      "temperature": 21,
+      "batteryLevel": 82,
+      "counter": 41806,
+      "rssi": -50
+    }
+  ],
+  "networkObservations": {
+    "wifi": [
+      { "mac": "70:0f:6a:e9:f0:20", "ssid": "XPOSCWPA",      "rssi": -59 },
+      { "mac": "70:0f:6a:e9:f0:22", "ssid": "XPOSC",         "rssi": -59 },
+      { "mac": "b0:8b:cf:42:65:a4", "ssid": "GXO",           "rssi": -77 },
+      { "mac": "70:0f:6a:e9:f0:23", "ssid": "XPOSC_Guest",   "rssi": -59 }
+    ]
+  }
+}
+```
+
+### Secondary's (tag's) own report
+
+A separate, top-level feed message for one of the tags above. Note `reportedBy.device.id` matching the primary, and `reportedBy.report.id` matching the `secondaryObservations[].reportId` from the primary's payload.
+
+```json
+{
+  "id": "6612b1a0e4b0a1b2c3d4e5f7",
+  "time": "2026-04-09T10:48:51.981Z",
+  "rxTime": "2026-04-09T10:48:52.207Z",
+  "device": {
+    "id": "72308628872452464",
+    "displayId": "TAG-72452464",
+    "model": {
+      "name": "Tag-e4bl",
+      "family": "tag",
+      "product": "Tag",
+      "version": 1,
+      "revision": 0
+    },
+    "labels": []
+  },
+  "owner": {
+    "id": "660fa1b2c3d4e5f6a7b8c9d0",
+    "name": "Acme Logistics"
+  },
+  "reportedBy": {
+    "device": {
+      "id": "72308628874417738",
+      "displayId": "HGD-00417738",
+      "model": { "name": "HGD", "family": "locoCard", "product": "LocoCard", "version": 4, "revision": 1 }
+    },
+    "report": {
+      "id": "6612b1a0e4b0a1b2c3d4e5f6",
+      "time": "2026-04-09T10:47:58.612Z"
+    },
+    "rssi": -53
+  },
+  "location": {
+    "type": "wifi",
+    "time": "2026-04-09T10:48:51.981Z",
+    "global": {
+      "lat": 34.080073,
+      "lon": -117.224648,
+      "cep": 37.0
+    }
+  },
+  "sensors": {
+    "battery": {
+      "level": 80,
+      "state": "good",
+      "charging": false
+    },
+    "externalPower": false
+  },
+  "timeSeries": {
+    "temperature": [
+      { "time": "2026-04-09T10:36:42.981Z", "value": 22.6 },
+      { "time": "2026-04-09T10:51:42.981Z", "value": 22.6 },
+      { "time": "2026-04-09T11:06:42.981Z", "value": 22.5 },
+      { "time": "2026-04-09T11:21:42.981Z", "value": 22.5 },
+      { "time": "2026-04-09T11:36:42.981Z", "value": 22.5 },
+      { "time": "2026-04-09T11:51:42.981Z", "value": 22.4 }
+    ]
+  }
+}
+```
+
+### Practical notes
+
+- A primary that observes **N** paired tags produces **N + 1** feed messages per reporting window: one for itself with N entries in `secondaryObservations[]`, and one for each tag.
+- Third-party beacons (cable seals, Reelable, Chorus) do **not** generate their own reports — they only appear under `thirdPartyObservations[]` on the observing device. Only LocoAware secondaries get standalone reports.
+- If you store per-device latest state, the tag's standalone report is the authoritative source for the tag's sensors and time series. `secondaryObservations[]` on the primary is a presence/RSSI summary, not a sensor snapshot.
+- Tags often have no GPS or Wi-Fi of their own; `location` on a tag's report typically reflects the primary's resolved position at the time of relay.
+
+---
+
+## 10. Null Handling
 
 The feed omits null fields from the JSON entirely rather than sending them as `null`. Your integration should treat missing fields as absent/not-applicable, not expect explicit nulls. For example, a device without sterilisation tracking will have no `sensors.sterilisation` key at all.
 
 ---
 
-## 10. Receiving Webhook Events
+## 11. Receiving Webhook Events
 
 > **This is the highest-volume feed.** A single company with a few thousand active devices can produce **hundreds of reports per second**. Your webhook handler must do the absolute minimum on the request thread: verify the signature, push the payload onto a queue or `inbox` table, and respond `202 Accepted`. All real work — shipment lookup, threshold checks, database writes, downstream calls — belongs in a separate worker process you can scale independently. Inline processing **will** time out under fleet-scale load, and LocoAware retries non-2xx responses, multiplying the load further.
 
@@ -516,6 +701,6 @@ public ResponseEntity<Void> onDeviceReport(@RequestBody JsonNode body) {
 
 - The two lookups run independently: a single report can both append to a shipment and update a device record.
 - Cache the `findIdByDeviceNameOrId` lookup. Reports for an active device arrive in bursts — caching shipment-by-device for the duration of the shipment is the single biggest worker-side optimisation.
-- Treat missing fields as absent (see [Null Handling](#9-null-handling)) — `device.name` may be unset for devices that haven't been assigned to a shipment.
+- Treat missing fields as absent (see [Null Handling](#10-null-handling)) — `device.name` may be unset for devices that haven't been assigned to a shipment.
 - If your webhook is HMAC-signed, verify the signature **before** enqueueing.
 - LocoAware retries on any non-2xx response. Return 2xx (typically 202) as soon as the message is durably enqueued.

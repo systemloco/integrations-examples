@@ -55,10 +55,9 @@ public class Worker : BackgroundService
 
     private async Task HandleDeviceReport(JsonElement report)
     {
-        var deviceName = Str(report, "device", "name");
-        var deviceId   = Str(report, "device", "id");
+        var deviceId = Str(report, "device", "id");
 
-        var shipmentId = await _shipments.FindIdByDeviceNameOrIdAsync(deviceName, deviceId);
+        var shipmentId = await FindShipmentForReportAsync(report);
         if (shipmentId is not null)
         {
             await _shipments.AppendEventAsync(shipmentId, report);
@@ -68,14 +67,29 @@ public class Worker : BackgroundService
         {
             await _devices.UpdateLatestAsync(deviceId, report);
         }
+
+        // Touch each observed secondary (paired tag) — presence only. The tag's
+        // authoritative sensor data arrives in its own separate report.
+        if (report.ValueKind == JsonValueKind.Object
+            && report.TryGetProperty("secondaryObservations", out var observations)
+            && observations.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var observation in observations.EnumerateArray())
+            {
+                var secondaryId = Str(observation, "id");
+                if (secondaryId is not null && await _devices.ExistsAsync(secondaryId))
+                {
+                    await _devices.UpdateLatestAsync(secondaryId, observation);
+                }
+            }
+        }
     }
 
     private async Task HandleDeviceEvent(JsonElement @event)
     {
-        var deviceName = Str(@event, "device", "name");
-        var deviceId   = Str(@event, "device", "id");
+        var deviceId = Str(@event, "device", "id");
 
-        var shipmentId = await _shipments.FindIdByDeviceNameOrIdAsync(deviceName, deviceId);
+        var shipmentId = await FindShipmentForReportAsync(@event);
         if (shipmentId is not null)
         {
             await _shipments.AppendEventAsync(shipmentId, @event);
@@ -85,6 +99,30 @@ public class Worker : BackgroundService
         {
             await _devices.UpdateLatestAsync(deviceId, @event);
         }
+    }
+
+    /// <summary>
+    /// Shipment lookup with a fallback to the relay/primary device.
+    ///
+    /// A secondary's (BLE tag's) report carries the primary that relayed it in
+    /// <c>reportedBy.device</c>. Tags typically don't have a shipment binding
+    /// of their own — falling back to the primary attaches the tag's data to
+    /// the same shipment as the gateway it lives on.
+    /// </summary>
+    private async Task<string?> FindShipmentForReportAsync(JsonElement report)
+    {
+        var deviceName = Str(report, "device", "name");
+        var deviceId   = Str(report, "device", "id");
+        var shipmentId = await _shipments.FindIdByDeviceNameOrIdAsync(deviceName, deviceId);
+        if (shipmentId is not null) return shipmentId;
+
+        var relayName = Str(report, "reportedBy", "device", "name");
+        var relayId   = Str(report, "reportedBy", "device", "id");
+        if (relayName is not null || relayId is not null)
+        {
+            return await _shipments.FindIdByDeviceNameOrIdAsync(relayName, relayId);
+        }
+        return null;
     }
 
     private static string? Str(JsonElement e, params string[] path)

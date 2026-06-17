@@ -65,6 +65,15 @@ shipmentId = repository.findShipmentIdByDeviceNameOrId(name, id)
 
 The helper's internal logic (a single indexed SQL query, a cached Redis lookup, etc.) is up to you — what matters is that the caller asks for "the shipment associated with *either* this name *or* this device id" in one call.
 
+#### Tag (secondary) reports — fall back to the primary
+
+When a BLE tag paired to a cellular/Wi-Fi gateway reports in, you receive **two distinct messages** per reporting window: one for the gateway (the **primary**), and a separate one for each tag (the **secondary**), where `reportedBy.device` on the tag's report points back at the primary that relayed it. See [Primary and Secondary Reporting](../Device_Reports_V2_Integration_Guide.md#9-primary-and-secondary-reporting) in the V2 guide for the full payload shape.
+
+The worker examples handle this two-pass:
+
+1. **Shipment lookup falls back through the relay.** If a tag's own `device.name`/`device.id` doesn't match a shipment, the worker re-runs the lookup against `reportedBy.device.name` / `reportedBy.device.id`. Tags rarely have their own shipment binding — falling back to the primary attaches the tag's sensor data to the same shipment as the gateway it lives on.
+2. **Primary reports touch each observed secondary.** When the primary's report has `secondaryObservations[]`, the worker iterates that list and calls `devices.updateLatest` on each observed tag. The tag's authoritative sensor data still arrives in its own message — this is just a presence touch so dashboards show "last seen by primary" without waiting for the tag's standalone report.
+
 #### Don't have your own dockside / device-assignment workflow?
 
 The `device.name → shipment` convention assumes you have something on your end that writes the shipment ID into the device's name when it's assigned. If you don't, **[LocoAlias](https://systemlo.co/apps)** is a LocoAware app that creates a digital twin of a shipment or asset and sets the device's name to match — so the same `device.name` lookup works without you having to build that assignment workflow yourself.
