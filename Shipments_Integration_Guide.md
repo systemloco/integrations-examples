@@ -206,7 +206,7 @@ A device or asset reported a position with sensor readings. Exactly one of `devi
       "id": "660e1a2b3c4d5e6f",
       "displayId": "HG-00012345",
       "name": "Tracker #7",
-      "model": { "name": "HGx", "family": "locoCard", "product": "LocoCard", "version": 4, "revision": 2 },
+      "model": { "name": "HGD4", "family": "locoTrack", "product": "LocoTrack", "version": 4, "revision": 2 },
       "firmware": "2.4.1",
       "labels": ["uk-fleet"]
     },
@@ -337,7 +337,7 @@ Emitted when a shipment is created or updated. The payload contains the full shi
       "id": "660e1a2b3c4d5e6f",
       "displayId": "HG-00012345",
       "name": "Fleet Tracker #7",
-      "model": { "name": "HGx", "family": "locoCard", "product": "LocoCard", "version": 4, "revision": 2 },
+      "model": { "name": "HGD4", "family": "locoTrack", "product": "LocoTrack", "version": 4, "revision": 2 },
       "firmware": "2.4.1",
       "labels": ["uk-fleet"]
     },

@@ -490,9 +490,9 @@ These event types have **no `payload` object** — the event itself (with `locat
     "displayId": "HG-00012345",
     "name": "Cold Chain Tracker #7",
     "model": {
-      "name": "HGx",
-      "family": "locoCard",
-      "product": "LocoCard",
+      "name": "HGD4",
+      "family": "locoTrack",
+      "product": "LocoTrack",
       "version": 4,
       "revision": 2
     },

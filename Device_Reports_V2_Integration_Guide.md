@@ -395,9 +395,9 @@ The `reportReasons` array lists why the device generated this report. A single r
     "displayId": "HG-00012345",
     "name": "Cold Chain Tracker #7",
     "model": {
-      "name": "HGx",
-      "family": "locoCard",
-      "product": "LocoCard",
+      "name": "HGD4",
+      "family": "locoTrack",
+      "product": "LocoTrack",
       "version": 4,
       "revision": 2
     },
@@ -431,10 +431,14 @@ The `reportReasons` array lists why the device generated this report. A single r
       "voltage": 3.8,
       "charging": false
     },
+    "lightLevel": 400,
+    "orientation": { "x": 0.02, "y": 0.05, "z": 1.00 },
+    "vibration":   { "x": 0.04, "y": 0.06, "z": 0.03 },
+    "movement": "moving",
     "temperature": 9.2,
     "humidity": 55.3,
-    "movement": "moving",
-    "lightLevel": 400,
+    "atmosphericPressure": 1012.4,
+    "externalPower": true,
     "cellSignal": -83
   },
   "sensorEvents": [
@@ -446,6 +450,19 @@ The `reportReasons` array lists why the device generated this report. A single r
     ],
     "cells": [
       { "mcc": 234, "mnc": 15, "cell": 12345, "lac": 6789, "rssi": -95 }
+    ],
+    "lteNeighbourCells": [
+      { "pci": 3, "earfcn": 6350, "rsrq": -5, "rsrp": -87 }
+    ]
+  },
+  "timeSeries": {
+    "temperature": [
+      { "time": "2026-04-09T10:15:00.000Z", "value": 9.4 },
+      { "time": "2026-04-09T10:29:58.000Z", "value": 9.2 }
+    ],
+    "atmosphericPressure": [
+      { "time": "2026-04-09T10:15:00.000Z", "value": 1012.5 },
+      { "time": "2026-04-09T10:29:58.000Z", "value": 1012.4 }
     ]
   }
 }
@@ -466,7 +483,7 @@ Treat them as independent feed deliveries. They are not guaranteed to arrive in 
 
 ### Primary device's report
 
-A locoCard-style gateway reporting in, observing a fleet of paired temperature tags and a cable seal beacon. Trimmed for brevity — only the tag-relevant fields are filled in.
+A LocoTrack HGD4 hub reporting in, observing a fleet of paired temperature tags and a cable seal beacon. Trimmed for brevity — only the tag-relevant fields are filled in.
 
 ```json
 {
@@ -477,9 +494,9 @@ A locoCard-style gateway reporting in, observing a fleet of paired temperature t
     "id": "72308628874417738",
     "displayId": "HGD-00417738",
     "model": {
-      "name": "HGD",
-      "family": "locoCard",
-      "product": "LocoCard",
+      "name": "HGD4",
+      "family": "locoTrack",
+      "product": "LocoTrack",
       "version": 4,
       "revision": 1
     },
@@ -519,7 +536,7 @@ A locoCard-style gateway reporting in, observing a fleet of paired temperature t
     {
       "id": "72308628872452464",
       "displayId": "TAG-72452464",
-      "model": { "name": "Tag-e4bl", "family": "tag", "product": "Tag", "version": 1, "revision": 0 },
+      "model": { "name": "E1BL", "family": "locoCard", "product": "LocoCard", "version": 1, "revision": 0 },
       "reportType": "presence",
       "reportId": "6612b1a0e4b0a1b2c3d4e5f7",
       "rssi": -53,
@@ -528,7 +545,7 @@ A locoCard-style gateway reporting in, observing a fleet of paired temperature t
     {
       "id": "72308628873734501",
       "displayId": "TAG-73734501",
-      "model": { "name": "Tag-e4bl", "family": "tag", "product": "Tag", "version": 1, "revision": 0 },
+      "model": { "name": "E1BL", "family": "locoCard", "product": "LocoCard", "version": 1, "revision": 0 },
       "reportType": "presence",
       "reportId": "6612b1a0e4b0a1b2c3d4e5f8",
       "rssi": -67,
@@ -574,9 +591,9 @@ A separate, top-level feed message for one of the tags above. Note `reportedBy.d
     "id": "72308628872452464",
     "displayId": "TAG-72452464",
     "model": {
-      "name": "Tag-e4bl",
-      "family": "tag",
-      "product": "Tag",
+      "name": "E1BL",
+      "family": "locoCard",
+      "product": "LocoCard",
       "version": 1,
       "revision": 0
     },
@@ -590,7 +607,7 @@ A separate, top-level feed message for one of the tags above. Note `reportedBy.d
     "device": {
       "id": "72308628874417738",
       "displayId": "HGD-00417738",
-      "model": { "name": "HGD", "family": "locoCard", "product": "LocoCard", "version": 4, "revision": 1 }
+      "model": { "name": "HGD4", "family": "locoTrack", "product": "LocoTrack", "version": 4, "revision": 1 }
     },
     "report": {
       "id": "6612b1a0e4b0a1b2c3d4e5f6",
