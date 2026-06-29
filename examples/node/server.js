@@ -2,6 +2,7 @@ const express = require('express');
 const { verifySignature } = require('./lib/hmac');
 const { publish } = require('./lib/queue');
 const { shipments, devices, assets } = require('./lib/repos');
+const { parseDeviceReport, projectLatestState } = require('./lib/parse_report');
 
 function createApp() {
 const app = express();
@@ -26,11 +27,13 @@ app.post('/webhooks/shipments', verifySignature, asyncHandler(async (req, res) =
         await shipments.appendEvent(shipmentId, event);
     }
 
-    // A `report` event embeds a device; keep the device's latest state in sync.
-    if (event.type === 'report') {
-        const deviceId = event.payload && event.payload.device && event.payload.device.id;
+    // A `report` event embeds a device report under `payload`. Parse it and
+    // keep the per-device "latest state" record up to date.
+    if (event.type === 'report' && event.payload) {
+        const doc = parseDeviceReport(event.payload);
+        const deviceId = doc.device && doc.device.id;
         if (deviceId && await devices.exists(deviceId)) {
-            await devices.updateLatest(deviceId, event);
+            await devices.upsertLatest(deviceId, projectLatestState(doc));
         }
     }
 

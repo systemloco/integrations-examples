@@ -42,8 +42,12 @@ public class WebhookEndpointsTests : IClassFixture<TestAppFactory>
     [Fact]
     public async Task ShipmentReportSyncsTheEmbeddedDevice()
     {
+        var payload = "{\"id\":\"rpt_2\",\"time\":\"2026-04-09T10:00:00.000Z\","
+                      + "\"device\":{\"id\":\"dev_2\",\"displayId\":\"D-2\","
+                      + "\"model\":{\"family\":\"locoTrack\",\"name\":\"HGD4\",\"product\":\"LocoTrack\",\"version\":4,\"revision\":1},"
+                      + "\"labels\":[]},\"owner\":{\"id\":\"own-1\",\"name\":\"Acme\"}}";
         var resp = await _client.PostAsync("/webhooks/shipments",
-            Json("{\"id\":\"evt_2\",\"type\":\"report\",\"shipment\":{\"id\":\"ship_2\"},\"payload\":{\"device\":{\"id\":\"dev_2\"}}}"));
+            Json("{\"id\":\"evt_2\",\"type\":\"report\",\"shipment\":{\"id\":\"ship_2\"},\"payload\":" + payload + "}"));
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
 
         Assert.Contains("dev_2", _factory.Devices.Updates);
@@ -138,14 +142,14 @@ public class RecordingQueueClient : QueueClient
 
 public class RecordingShipments : ShipmentsRepository
 {
-    public record Append(string ShipmentId, JsonElement Event);
+    public record Append(string ShipmentId, object Event);
     public List<Append> Appended { get; } = new();
     public List<(string?, string?)> DeviceLookups { get; } = new();
     public List<(string?, string?)> AssetLookups { get; } = new();
 
     public RecordingShipments() : base(NullLogger<ShipmentsRepository>.Instance) {}
 
-    public override Task AppendEventAsync(string shipmentId, JsonElement evt)
+    public override Task AppendEventAsync(string shipmentId, object evt)
     {
         Appended.Add(new Append(shipmentId, evt));
         return Task.CompletedTask;
@@ -170,6 +174,12 @@ public class RecordingDevices : DevicesRepository
     public RecordingDevices() : base(NullLogger<DevicesRepository>.Instance) {}
 
     public override Task UpdateLatestAsync(string deviceId, JsonElement evt)
+    {
+        Updates.Add(deviceId);
+        return Task.CompletedTask;
+    }
+
+    public override Task UpsertLatestAsync(string deviceId, IDictionary<string, object?> patch)
     {
         Updates.Add(deviceId);
         return Task.CompletedTask;

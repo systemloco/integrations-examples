@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 public class WebhookController {
 
@@ -35,11 +37,18 @@ public class WebhookController {
             shipments.appendEvent(shipmentId, event);
         }
 
-        // `report` events embed a device — keep the device's latest state in sync.
-        if ("report".equals(event.path("type").asText())) {
-            String deviceId = event.path("payload").path("device").path("id").asText(null);
-            if (deviceId != null && devices.exists(deviceId)) {
-                devices.updateLatest(deviceId, event);
+        // `report` events embed a device report under `payload`. Parse it and
+        // upsert the per-device "latest state" record with a structured
+        // projection rather than the raw envelope.
+        if ("report".equals(event.path("type").asText()) && event.has("payload")) {
+            Map<String, Object> doc = DeviceReportParser.parse(event.path("payload"));
+            if (doc != null) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> device = (Map<String, Object>) doc.get("device");
+                String deviceId = device == null ? null : (String) device.get("id");
+                if (deviceId != null && devices.exists(deviceId)) {
+                    devices.upsertLatest(deviceId, DeviceReportParser.projectLatestState(doc));
+                }
             }
         }
 

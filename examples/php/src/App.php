@@ -63,10 +63,17 @@ function createApp(
             $shipments->appendEvent($shipmentId, $event);
         }
 
-        if (($event['type'] ?? null) === 'report') {
-            $deviceId = $event['payload']['device']['id'] ?? null;
+        // `report` events embed a device report under `payload`. Parse it and
+        // upsert the per-device "latest state" record with a structured
+        // projection rather than the raw envelope.
+        if (($event['type'] ?? null) === 'report' && isset($event['payload']) && is_array($event['payload'])) {
+            $doc = DeviceReportParser::parse($event['payload']);
+            $deviceId = $doc['device']['id'] ?? null;
             if ($deviceId !== null && $devices->exists($deviceId)) {
-                $devices->updateLatest($deviceId, $event);
+                $state = DeviceReportParser::projectLatestState($doc);
+                if ($state !== null) {
+                    $devices->upsertLatest($deviceId, $state);
+                }
             }
         }
 

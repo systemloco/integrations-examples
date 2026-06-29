@@ -6,6 +6,7 @@ using LocoAware.Webhook;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<QueueClient>();
+builder.Services.AddSingleton<DeviceReportsRepository>();
 builder.Services.AddSingleton<ShipmentsRepository>();
 builder.Services.AddSingleton<DevicesRepository>();
 builder.Services.AddSingleton<AssetsRepository>();
@@ -96,12 +97,23 @@ app.MapPost("/webhooks/shipments", async (HttpContext ctx,
         await shipments.AppendEventAsync(shipmentId, evt);
     }
 
-    if (Str(evt, "type") == "report")
+    // `report` events embed a device report under `payload`. Parse it and
+    // upsert the per-device "latest state" record with a structured
+    // projection rather than the raw envelope.
+    if (Str(evt, "type") == "report"
+        && evt.ValueKind == JsonValueKind.Object
+        && evt.TryGetProperty("payload", out var payload))
     {
-        var deviceId = Str(evt, "payload", "device", "id");
-        if (deviceId is not null && await devices.ExistsAsync(deviceId))
+        var doc = DeviceReportParser.Parse(payload);
+        if (doc is not null
+            && doc.TryGetValue("device", out var deviceObj)
+            && deviceObj is IDictionary<string, object?> device
+            && device.TryGetValue("id", out var devId)
+            && devId is string deviceId
+            && await devices.ExistsAsync(deviceId))
         {
-            await devices.UpdateLatestAsync(deviceId, evt);
+            var state = DeviceReportParser.ProjectLatestState(doc);
+            if (state is not null) await devices.UpsertLatestAsync(deviceId, state);
         }
     }
 

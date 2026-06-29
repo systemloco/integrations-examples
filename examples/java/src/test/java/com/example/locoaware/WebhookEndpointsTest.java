@@ -58,11 +58,14 @@ class WebhookEndpointsTest {
         mvc.perform(post("/webhooks/shipments")
                         .contentType("application/json")
                         .content("{\"id\":\"evt_2\",\"type\":\"report\",\"shipment\":{\"id\":\"ship_2\"}," +
-                                "\"payload\":{\"device\":{\"id\":\"dev_2\"}}}"))
+                                "\"payload\":{\"id\":\"rpt_2\",\"time\":\"2026-04-09T10:00:00.000Z\"," +
+                                "\"device\":{\"id\":\"dev_2\",\"displayId\":\"D-2\"," +
+                                "\"model\":{\"family\":\"locoTrack\",\"name\":\"HGD4\",\"product\":\"LocoTrack\",\"version\":4,\"revision\":1}," +
+                                "\"labels\":[]},\"owner\":{\"id\":\"own-1\",\"name\":\"Acme\"}}}"))
                 .andExpect(status().isOk());
 
         assertTrue(devices.updates.stream().anyMatch(id -> id.equals("dev_2")),
-                "expected device dev_2 to be updated");
+                "expected device dev_2 to be upserted");
     }
 
     @Test
@@ -127,12 +130,12 @@ class WebhookEndpointsTest {
     }
 
     static class RecordingShipments extends Repositories.Shipments {
-        record Append(String shipmentId, JsonNode event) {}
+        record Append(String shipmentId, Object event) {}
         final List<Append> appended = new ArrayList<>();
         final List<String[]> deviceLookups = new ArrayList<>();
         final List<String[]> assetLookups = new ArrayList<>();
 
-        @Override public void appendEvent(String shipmentId, JsonNode event) {
+        @Override public void appendEvent(String shipmentId, Object event) {
             appended.add(new Append(shipmentId, event));
         }
         @Override public String findIdByDeviceNameOrId(String deviceName, String deviceId) {
@@ -148,6 +151,7 @@ class WebhookEndpointsTest {
     static class RecordingDevices extends Repositories.Devices {
         final List<String> updates = new ArrayList<>();
         @Override public void updateLatest(String deviceId, JsonNode event) { updates.add(deviceId); }
+        @Override public void upsertLatest(String deviceId, java.util.Map<String, Object> patch) { updates.add(deviceId); }
     }
 
     static class RecordingAssets extends Repositories.Assets {

@@ -28,11 +28,20 @@ class WebhookEndpointsTest < Minitest::Test
   def test_shipment_report_syncs_the_embedded_device
     updated = []
     Devices.stub(:exists?, true) do
-      Devices.stub(:update_latest, ->(id, _evt) { updated << id }) do
+      Devices.stub(:upsert_latest, ->(id, _patch) { updated << id }) do
         post '/webhooks/shipments', JSON.generate(
           id: 'evt_2', type: 'report',
           shipment: { id: 'ship_2' },
-          payload: { device: { id: 'dev_2' } }
+          payload: {
+            id: 'rpt_2',
+            time: '2026-04-09T10:00:00.000Z',
+            device: {
+              id: 'dev_2', displayId: 'D-2',
+              model: { family: 'locoTrack', name: 'HGD4', product: 'LocoTrack', version: 4, revision: 1 },
+              labels: []
+            },
+            owner: { id: 'own-1', name: 'Acme' }
+          }
         ), { 'CONTENT_TYPE' => 'application/json' }
       end
     end
