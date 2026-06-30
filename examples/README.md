@@ -28,9 +28,10 @@ Each example exposes four endpoints — one per data feed:
 Each one also includes:
 
 - **HMAC signature verification** — constant-time comparison against a shared secret (`LOCOAWARE_WEBHOOK_SECRET`)
-- **A mock repository layer** — shipments, devices, assets. Replace with your real persistence.
-- **A mock queue client** — `publish(topic, message)`. Replace with SQS / SNS / Kafka / Pub/Sub / Service Bus / RabbitMQ / Redis Streams, or an `inbox` database table drained by a background worker.
-- **A mock worker** — shows what the queue consumer does once the message is dequeued.
+- **A Device Reports V2 parser** — `DeviceReportParser.parse(report)` turns a webhook payload into a document-store-shaped record: `_id` keyed to the report, every documented subsection extracted into a named field, optional fields omitted entirely (no explicit `null`s), and a derived `role` of `"primary" | "secondary" | "standalone"` so the primary↔secondary relationship between a LocoTrack hub and the BLE LocoTags it relays is explicit. Tables and schema migrations are deliberately out of scope.
+- **An in-memory document-store stand-in** — `deviceReports`, `devices`, `shipments`, `assets` collections, each a `Map<id, document>` shaped the way you'd push it into MongoDB / DocumentDB / CosmosDB / Couchbase / Firestore. Each method's docstring includes the production call it stands in for (`collection.updateOne(...{ upsert: true })`, etc.).
+- **A mock queue client** — `publish(topic, message)`. **This is for illustration only.** In real life, replace with SQS / SNS / Kafka / Pub/Sub / Service Bus / RabbitMQ / Redis Streams, or an `inbox` database table drained by a background worker.
+- **A queue-draining worker** — shows what the consumer does on every dequeued message: insert into immutable `device_reports` history, append to the matched shipment, upsert per-device latest state, and (for primaries) presence-touch each paired secondary without clobbering the tag's authoritative sensor data.
 
 ---
 
@@ -72,7 +73,7 @@ When a BLE tag paired to a cellular/Wi-Fi gateway reports in, you receive **two 
 The worker examples handle this two-pass:
 
 1. **Shipment lookup falls back through the relay.** If a tag's own `device.name`/`device.id` doesn't match a shipment, the worker re-runs the lookup against `reportedBy.device.name` / `reportedBy.device.id`. Tags rarely have their own shipment binding — falling back to the primary attaches the tag's sensor data to the same shipment as the gateway it lives on.
-2. **Primary reports touch each observed secondary.** When the primary's report has `secondaryObservations[]`, the worker iterates that list and calls `devices.updateLatest` on each observed tag. The tag's authoritative sensor data still arrives in its own message — this is just a presence touch so dashboards show "last seen by primary" without waiting for the tag's standalone report.
+2. **Primary reports presence-touch each observed secondary.** When the primary's report has `secondaryObservations[]`, the worker iterates that list and calls `devices.touchObservation(secondaryId, …)` on each observed tag — writing only `lastSeenBy` (primary device id, RSSI, observation time). The tag's authoritative sensor data still arrives in its own standalone report, which writes `lastSensors` / `lastLocation` separately. The two writes commute: whichever message arrives second never overwrites the other's fields.
 
 #### Don't have your own dockside / device-assignment workflow?
 

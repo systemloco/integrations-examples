@@ -5,6 +5,7 @@ require 'base64'
 
 require_relative 'queue_client'
 require_relative 'repositories'
+require_relative 'device_report_parser'
 
 class LocoAwareWebhook < Sinatra::Base
   # Sinatra 4 / Rack 3 enables Rack::Protection::HostAuthorization by default,
@@ -46,9 +47,15 @@ class LocoAwareWebhook < Sinatra::Base
     shipment_id = event.dig('shipment', 'id')
     Shipments.append_event(shipment_id, event) if shipment_id
 
-    if event['type'] == 'report'
-      device_id = event.dig('payload', 'device', 'id')
-      Devices.update_latest(device_id, event) if device_id && Devices.exists?(device_id)
+    if event['type'] == 'report' && event['payload']
+      # Parse the embedded device report and keep the per-device "latest
+      # state" record up to date with a structured projection rather than
+      # the raw envelope.
+      doc = DeviceReportParser.parse(event['payload'])
+      device_id = doc.dig('device', 'id')
+      if device_id && Devices.exists?(device_id)
+        Devices.upsert_latest(device_id, DeviceReportParser.project_latest_state(doc))
+      end
     end
 
     status 200

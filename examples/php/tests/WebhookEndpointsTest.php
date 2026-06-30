@@ -53,7 +53,16 @@ class WebhookEndpointsTest extends TestCase
         $body = json_encode([
             'id' => 'evt_2', 'type' => 'report',
             'shipment' => ['id' => 'ship_2'],
-            'payload' => ['device' => ['id' => 'dev_2']],
+            'payload' => [
+                'id' => 'rpt_2',
+                'time' => '2026-04-09T10:00:00.000Z',
+                'device' => [
+                    'id' => 'dev_2', 'displayId' => 'D-2',
+                    'model' => ['family' => 'locoTrack', 'name' => 'HGD4', 'product' => 'LocoTrack', 'version' => 4, 'revision' => 1],
+                    'labels' => [],
+                ],
+                'owner' => ['id' => 'own-1', 'name' => 'Acme'],
+            ],
         ]);
         $resp = $this->dispatch('POST', '/webhooks/shipments', $body);
         $this->assertSame(200, $resp->getStatusCode());

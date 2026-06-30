@@ -56,6 +56,11 @@ class RecordingDevices extends Devices
     {
         $this->updates[] = $deviceId;
     }
+
+    public function upsertLatest(string $deviceId, array $patch): void
+    {
+        $this->updates[] = $deviceId;
+    }
 }
 
 class RecordingAssets extends Assets
